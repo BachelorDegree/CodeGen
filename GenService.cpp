@@ -152,8 +152,19 @@ void MakeServerConf(const std::string &strBaseDir, const FileDescriptor *pDescri
 
     worker_thread_num = 4
 </server>
+<satellite>
+    bind_interface = eth0
+    <servers>
+        server1 = 10.0.0.102:5553
+        # server2 = 10.0.0.103:5553
+    </servers>
+</satellite>
 <libs>
-    sample = /path/to/libsample.so
+    <sample>
+        canonical_service_name = SampleService
+        dylib_path = /path/to/libsample.so
+        config_file = /path/to/business/config.conf
+    </sample>
 </libs>)xxx");
 }
 void MakeDylibExport(const std::string &strBaseDir, const FileDescriptor *pDescriptor)
@@ -175,7 +186,7 @@ extern "C"
 {
 
 const char *    EXPORT_Description(void);
-void            EXPORT_DylibInit(void);
+void            EXPORT_DylibInit(const char *);
 grpc::Service * EXPORT_GetGrpcServiceInstance(void);
 void            EXPORT_OnWorkerThreadStart(grpc::ServerCompletionQueue*);
 
