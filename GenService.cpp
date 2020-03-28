@@ -66,8 +66,10 @@ void $method$Handler::Proceed(void)
     case Status::PROCESS:
         // Firstly, spawn a new handler for next incoming RPC call
         new $method$Handler(service, cq);
+        this->BeforeProcess();
         // Implement your logic here
         // response.set_reply(request.greeting());
+        // this->SetReturnCode(100);
         this->SetStatusFinish();
         responder.Finish(response, grpc::Status::OK, this);
         break;
@@ -99,7 +101,7 @@ void MakeAsyncRpcHandler(const std::string &strBaseDir, const FileDescriptor *pD
   oCodePrinter.Print(R"xxx(#pragma once
 
 #include <grpcpp/server_context.h>
-
+#include "CoreDeps/AlohaIO/ContextHelper.hpp"
 namespace grpc
 {
     class ServerContext;
@@ -127,7 +129,8 @@ public:
     void SetStatusCreate(void) { status = Status::CREATE; }
     void SetStatusProcess(void) { status = Status::PROCESS; }
     void SetStatusFinish(void) { status = Status::FINISH; }
-
+    void BeforeProcess(void) { ServerContextHelper::GetInstance()->BindContext(ctx); }
+    void SetReturnCode(int iRet) { ServerContextHelper::GetInstance()->SetReturnCode(iRet); }
 protected:
     Status                          status;
     grpc::ServerCompletionQueue*    cq;
@@ -261,14 +264,15 @@ SET(CMAKE_CXX_FLAGS "-Wall")
 IF(CMAKE_BUILD_TYPE MATCHES DEBUG)
     SET(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-DDEBUG")
 ENDIF(CMAKE_BUILD_TYPE MATCHES DEBUG)
-
+add_subdirectory(./CoreDeps)
 LINK_LIBRARIES(pthread protobuf gpr grpc++ grpc++_reflection)
 
 SET(APP_SOURCES "./dylib.cpp")
 FILE(GLOB APP_SOURCES ${APP_SOURCES} "./Proto/*.cc")
 FILE(GLOB APP_SOURCES ${APP_SOURCES} "./Handler/*.cpp")
 INCLUDE_DIRECTORIES(".")
-ADD_LIBRARY(|package| SHARED ${APP_SOURCES}))xxx",
+ADD_LIBRARY(|package| SHARED ${APP_SOURCES})
+TARGET_LINK_LIBRARIES(|package| coredeps))xxx",
                      oArgument, '|');
 }
 void MakeProto(const std::string &strBaseDir, const std::string &strProtoPath)
@@ -276,6 +280,12 @@ void MakeProto(const std::string &strBaseDir, const std::string &strProtoPath)
 
   system(("protoc --cpp_out=" + strBaseDir + " " + strProtoPath + ";").c_str());
   system(("protoc --grpc_out=" + strBaseDir + " --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` " + strProtoPath).c_str());
+}
+void MakeGitSubModule(const std::string &strBaseDir){
+  FilePrinter oCodePrinter{strBaseDir + "/.gitmodules"};
+  oCodePrinter.Print(R"xxx([submodule "CoreDeps"]
+	path = CoreDeps
+	url = https://github.com/BachelorDegree/CoreDeps)xxx");
 }
 int main(int argc, char **argv)
 {
@@ -302,4 +312,5 @@ int main(int argc, char **argv)
   MakeDylibExport(pFileDesc->package(), pFileDesc);
   MakeCmakeList(pFileDesc->package(), pFileDesc);
   MakeProto(pFileDesc->package() + "/Proto", argv[1]);
+  MakeGitSubModule(pFileDesc->package());
 }
