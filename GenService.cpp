@@ -231,6 +231,7 @@ void MakeServerConf(const std::string &strBaseDir, const FileDescriptor *pDescri
     bind_port = 8964
 
     worker_thread_num = 4
+    worker_co_num = 20
 </server>
 <satellite>
     bind_interface = eth0
@@ -347,6 +348,7 @@ FILE(GLOB APP_SOURCES ${APP_SOURCES} "./Handler/*.cpp")
 FILE(GLOB APP_SOURCES ${APP_SOURCES} "./*.cpp")
 INCLUDE_DIRECTORIES(".")
 ADD_LIBRARY(|package| SHARED ${APP_SOURCES})
+TARGET_LINK_LIBRARIES(|package| coredeps)
 )xxx",
                      oArgument, '|');
 }
