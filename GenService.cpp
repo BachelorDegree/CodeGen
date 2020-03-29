@@ -389,5 +389,5 @@ int main(int argc, char **argv)
   MakeCmakeList(pFileDesc->package(), pFileDesc);
   MakeImpl(pFileDesc->package(), pFileDesc);
   MakeProto(pFileDesc->package() + "/Proto", argv[1]);
-  MakeGitSubModule(pFileDesc->package());
+  //MakeGitSubModule(pFileDesc->package());
 }
