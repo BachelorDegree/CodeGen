@@ -49,7 +49,7 @@ private:
                        oArgument);
   FilePrinter oCodePrinter{strBaseDir + "/" + pDescriptor->name() + "Handler.cpp"};
   oCodePrinter.Print(R"xxx(#include "$method$Handler.hpp"
-
+#include "$service$Impl.hpp"
 void $method$Handler::SetInterfaceName(void)
 {
     interfaceName = "$service$.$method$";
@@ -64,15 +64,17 @@ void $method$Handler::Proceed(void)
         service->Request$method$(&ctx, &request, &responder, cq, cq, this);
         break;
     case Status::PROCESS:
+    {
         // Firstly, spawn a new handler for next incoming RPC call
         new $method$Handler(service, cq);
         this->BeforeProcess();
         // Implement your logic here
-        // response.set_reply(request.greeting());
-        // this->SetReturnCode(100);
+        int iRet = $service$Impl::GetInstance()->$method$(request, response);
+        this->SetReturnCode(iRet);
         this->SetStatusFinish();
         responder.Finish(response, grpc::Status::OK, this);
         break;
+    }
     case Status::FINISH:
         delete this;
         break;
@@ -95,13 +97,85 @@ void MakeHandlers(const std::string &strBaseDir, const FileDescriptor *pDescript
     }
   }
 }
+void MakeImpl(const std::string &strBaseDir, const FileDescriptor *pDescriptor)
+{
+  PrinterArgument oArgument;
+  oArgument["package"] = pDescriptor->package();
+  oArgument["service"] = pDescriptor->service(0)->name();
+  oArgument["service_symbol"] = PBHelper::QualifiedServiceName(pDescriptor->service(0));
+  FilePrinter oHeaderPrinter{strBaseDir + "/" + pDescriptor->service(0)->name() + "Impl.hpp"};
+  oHeaderPrinter.Print(R"xxx(#pragma once
+#include "Proto/$package$.pb.h"
+class $service$Impl
+{
+public:
+    static $service$Impl *GetInstance();
+    static void SetInstance($service$Impl *);
+    int OnServerStart(){
+        return 0;
+    })xxx",
+                       oArgument);
+  oHeaderPrinter.Indent();
+  for (int i = 0; i < pDescriptor->service_count(); i++)
+  {
+    auto pService = pDescriptor->service(i);
+    for (int j = 0; j < pService->method_count(); j++)
+    {
+      auto pMethod = pService->method(j);
+      oArgument["method"] = pMethod->name();
+      oArgument["request"] = pMethod->input_type()->name();
+      oArgument["request_symbol"] = PBHelper::QualifiedClassName(pMethod->input_type());
+      oArgument["response"] = pMethod->output_type()->name();
+      oArgument["response_symbol"] = PBHelper::QualifiedClassName(pMethod->output_type());
+      oHeaderPrinter.Print("int $method$(const $request_symbol$ & oReq, $response_symbol$ & oResp);", oArgument);
+    }
+  }
+  oHeaderPrinter.Outdent();
+  oHeaderPrinter.Print("};");
+  FilePrinter oInstancePrinter{strBaseDir + "/" + pDescriptor->service(0)->name() + "ImplInstance.cpp"};
+  oInstancePrinter.Print(R"xxx(#include <colib/co_routine_specific.h>
+#include "$service$Impl.hpp"
+struct __$service$ImplWrapper{
+    $service$Impl * pImpl;
+};
+CO_ROUTINE_SPECIFIC(__$service$ImplWrapper, g_co$service$ImplWrapper)
+$service$Impl *$service$Impl::GetInstance()
+{
+    return g_co$service$ImplWrapper->pImpl;
+}
+void $service$Impl::SetInstance($service$Impl *pImpl)
+{
+    g_co$service$ImplWrapper->pImpl = pImpl;
+})xxx",
+                         oArgument);
+  FilePrinter oImplPrinter{strBaseDir + "/" + pDescriptor->service(0)->name() + "Impl.cpp"};
+  oImplPrinter.Print("#include \"$service$Impl.hpp\"", oArgument);
+  for (int i = 0; i < pDescriptor->service_count(); i++)
+  {
+    auto pService = pDescriptor->service(i);
+    for (int j = 0; j < pService->method_count(); j++)
+    {
+      auto pMethod = pService->method(j);
+      oArgument["method"] = pMethod->name();
+      oArgument["request"] = pMethod->input_type()->name();
+      oArgument["request_symbol"] = PBHelper::QualifiedClassName(pMethod->input_type());
+      oArgument["response"] = pMethod->output_type()->name();
+      oArgument["response_symbol"] = PBHelper::QualifiedClassName(pMethod->output_type());
+      oImplPrinter.Print("int $service$Impl::$method$(const $request_symbol$ & oReq, $response_symbol$ & oResp) {", oArgument);
+      oImplPrinter.Indent();
+      oImplPrinter.Print("return -1;");
+      oImplPrinter.Outdent();
+      oImplPrinter.Print("}");
+    }
+  }
+}
 void MakeAsyncRpcHandler(const std::string &strBaseDir, const FileDescriptor *pDescriptor)
 {
   FilePrinter oCodePrinter{strBaseDir + "/AsyncRpcHandler.hpp"};
   oCodePrinter.Print(R"xxx(#pragma once
 
 #include <grpcpp/server_context.h>
-#include "CoreDeps/AlohaIO/ContextHelper.hpp"
+#include "coredeps/ContextHelper.hpp"
 namespace grpc
 {
     class ServerContext;
@@ -184,14 +258,12 @@ namespace grpc
     class Service;
     class ServerCompletionQueue;
 }
-class SatelliteClient;
 
 extern "C" 
 {
 
 const char *    EXPORT_Description(void);
 void            EXPORT_DylibInit(const char *);
-void            EXPORT_BindSatelliteInstance(SatelliteClient *);
 grpc::Service * EXPORT_GetGrpcServiceInstance(void);
 void            EXPORT_OnWorkerThreadStart(grpc::ServerCompletionQueue*);
 
@@ -200,6 +272,7 @@ void            EXPORT_OnWorkerThreadStart(grpc::ServerCompletionQueue*);
   FilePrinter oCodePrinter{strBaseDir + "/dylib.cpp"};
   oCodePrinter.Print("#include \"dylib_export.h\"", oArgument);
   oCodePrinter.Print("#include \"Proto/$package$.grpc.pb.h\"", oArgument);
+  oCodePrinter.Print("#include \"$service$Impl.hpp\"", oArgument);
   for (int i = 0; i < pDescriptor->service_count(); i++)
   {
     auto pService = pDescriptor->service(i);
@@ -217,7 +290,7 @@ const char * EXPORT_Description(void)
     return "$package$";
 }
 
-void EXPORT_DylibInit(void)
+void EXPORT_DylibInit(const char *)
 {
     // do nothing
 }
@@ -227,14 +300,11 @@ grpc::Service * EXPORT_GetGrpcServiceInstance(void)
     return &service;
 }
 
-void EXPORT_BindSatelliteInstance(SatelliteClient *i)
-{
-    // SatelliteClient::SetInstance(i);
-}
-
 void EXPORT_OnWorkerThreadStart(grpc::ServerCompletionQueue *cq)
 {
-    // Bind handlers
+  $service$Impl::SetInstance(new $service$Impl);
+  $service$Impl::GetInstance()->OnServerStart();
+  // Bind handlers
 )xxx",
                      oArgument);
   for (int i = 0; i < pDescriptor->service_count(); i++)
@@ -264,15 +334,17 @@ SET(CMAKE_CXX_FLAGS "-Wall")
 IF(CMAKE_BUILD_TYPE MATCHES DEBUG)
     SET(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-DDEBUG")
 ENDIF(CMAKE_BUILD_TYPE MATCHES DEBUG)
-add_subdirectory(./CoreDeps)
+INCLUDE_DIRECTORIES(/usr/local/include)
+INCLUDE_DIRECTORIES(.)
 LINK_LIBRARIES(pthread protobuf gpr grpc++ grpc++_reflection)
 
 SET(APP_SOURCES "./dylib.cpp")
 FILE(GLOB APP_SOURCES ${APP_SOURCES} "./Proto/*.cc")
 FILE(GLOB APP_SOURCES ${APP_SOURCES} "./Handler/*.cpp")
+FILE(GLOB APP_SOURCES ${APP_SOURCES} "./|service|ImplInstance.cpp")
 INCLUDE_DIRECTORIES(".")
 ADD_LIBRARY(|package| SHARED ${APP_SOURCES})
-TARGET_LINK_LIBRARIES(|package| coredeps))xxx",
+)xxx",
                      oArgument, '|');
 }
 void MakeProto(const std::string &strBaseDir, const std::string &strProtoPath)
@@ -281,7 +353,8 @@ void MakeProto(const std::string &strBaseDir, const std::string &strProtoPath)
   system(("protoc --cpp_out=" + strBaseDir + " " + strProtoPath + ";").c_str());
   system(("protoc --grpc_out=" + strBaseDir + " --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` " + strProtoPath).c_str());
 }
-void MakeGitSubModule(const std::string &strBaseDir){
+void MakeGitSubModule(const std::string &strBaseDir)
+{
   FilePrinter oCodePrinter{strBaseDir + "/.gitmodules"};
   oCodePrinter.Print(R"xxx([submodule "CoreDeps"]
 	path = CoreDeps
@@ -311,6 +384,7 @@ int main(int argc, char **argv)
   MakeServerConf(pFileDesc->package(), pFileDesc);
   MakeDylibExport(pFileDesc->package(), pFileDesc);
   MakeCmakeList(pFileDesc->package(), pFileDesc);
+  MakeImpl(pFileDesc->package(), pFileDesc);
   MakeProto(pFileDesc->package() + "/Proto", argv[1]);
   MakeGitSubModule(pFileDesc->package());
 }
