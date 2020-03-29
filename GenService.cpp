@@ -111,7 +111,10 @@ class $service$Impl
 public:
     static $service$Impl *GetInstance();
     static void SetInstance($service$Impl *);
-    int OnServerStart(){
+    static int BeforeServerStart(const char * czConf) {
+        return 0;
+    }
+    int BeforeWorkerStart() {
         return 0;
     })xxx",
                        oArgument);
@@ -290,9 +293,9 @@ const char * EXPORT_Description(void)
     return "$package$";
 }
 
-void EXPORT_DylibInit(const char *)
+void EXPORT_DylibInit(const char * conf_file)
 {
-    // do nothing
+    $service$Impl::BeforeServerStart(conf_file);
 }
 
 grpc::Service * EXPORT_GetGrpcServiceInstance(void)
@@ -303,7 +306,7 @@ grpc::Service * EXPORT_GetGrpcServiceInstance(void)
 void EXPORT_OnWorkerThreadStart(grpc::ServerCompletionQueue *cq)
 {
   $service$Impl::SetInstance(new $service$Impl);
-  $service$Impl::GetInstance()->OnServerStart();
+  $service$Impl::GetInstance()->BeforeWorkerStart();
   // Bind handlers
 )xxx",
                      oArgument);
@@ -341,7 +344,7 @@ LINK_LIBRARIES(pthread protobuf gpr grpc++ grpc++_reflection)
 SET(APP_SOURCES "./dylib.cpp")
 FILE(GLOB APP_SOURCES ${APP_SOURCES} "./Proto/*.cc")
 FILE(GLOB APP_SOURCES ${APP_SOURCES} "./Handler/*.cpp")
-FILE(GLOB APP_SOURCES ${APP_SOURCES} "./|service|ImplInstance.cpp")
+FILE(GLOB APP_SOURCES ${APP_SOURCES} "./*.cpp")
 INCLUDE_DIRECTORIES(".")
 ADD_LIBRARY(|package| SHARED ${APP_SOURCES})
 )xxx",
