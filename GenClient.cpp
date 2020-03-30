@@ -58,7 +58,7 @@ class $service$Client
 private:
   std::shared_ptr<grpc::Channel> m_pChannel;
 public:
-  PaxosKVServiceClient();
+  $service$Client();
   static std::shared_ptr<grpc::Channel> GetChannel();)xxx",
                        oArgument);
   oHeaderPrinter.Indent();
@@ -84,7 +84,7 @@ public:
 #include <coredeps/SatelliteClient.hpp>
 #include <coredeps/ContextHelper.hpp>
 #include "$service$Client.hpp"
-PaxosKVServiceClient::PaxosKVServiceClient()
+$service$Client::$service$Client()
 {
   m_pChannel = GetChannel();
 }
@@ -107,7 +107,7 @@ std::shared_ptr<grpc::Channel> $service$Client::GetChannel()
       oArgument["response_symbol"] = PBHelper::QualifiedClassName(pMethod->output_type());
       oClientPrinter.Print("int $service$Client::$method$(const $request_symbol$ & oReq, $response_symbol$ & oResp)", oArgument);
   oClientPrinter.Print(R"xxx({
-  paxoskv::PaxosKVService::Stub oStub{m_pChannel};
+  $service_symbol$::Stub oStub{m_pChannel};
   grpc::ClientContext oContext;
   auto oStatus = oStub.$method$(&oContext, oReq, &oResp);
   if (oStatus.ok() == false)
