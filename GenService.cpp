@@ -273,7 +273,7 @@ const char *    EXPORT_Description(void);
 void            EXPORT_DylibInit(const char *);
 grpc::Service * EXPORT_GetGrpcServiceInstance(void);
 void            EXPORT_OnWorkerThreadStart(grpc::ServerCompletionQueue*);
-
+void            EXPORT_OnCoroutineWorkerStart(void);
 } )xxx");
 
   FilePrinter oCodePrinter{strBaseDir + "/dylib.cpp"};
@@ -306,11 +306,13 @@ grpc::Service * EXPORT_GetGrpcServiceInstance(void)
 {
     return &service;
 }
-
+void EXPORT_OnCoroutineWorkerStart(void)
+{
+    $service$Impl::SetInstance(new $service$Impl);
+    $service$Impl::GetInstance()->BeforeWorkerStart();
+} 
 void EXPORT_OnWorkerThreadStart(grpc::ServerCompletionQueue *cq)
 {
-  $service$Impl::SetInstance(new $service$Impl);
-  $service$Impl::GetInstance()->BeforeWorkerStart();
   // Bind handlers
 )xxx",
                      oArgument);
