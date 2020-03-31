@@ -224,6 +224,9 @@ protected:
 }
 void MakeServerConf(const std::string &strBaseDir, const FileDescriptor *pDescriptor)
 {
+  PrinterArgument oArgument;
+  oArgument["package"] = pDescriptor->package();
+  oArgument["service"] = pDescriptor->service(0)->name();
   FilePrinter oCodePrinter{strBaseDir + "/server.conf"};
   oCodePrinter.Print(R"xxx(<server>
     daemon_name = aloha_io
@@ -241,12 +244,12 @@ void MakeServerConf(const std::string &strBaseDir, const FileDescriptor *pDescri
     </servers>
 </satellite>
 <libs>
-    <sample>
-        canonical_service_name = SampleService
+    <$service$>
+        canonical_service_name = $service$
         dylib_path = /path/to/libsample.so
         config_file = /path/to/business/config.conf
-    </sample>
-</libs>)xxx");
+    </$service$>>
+</libs>)xxx", oArgument);
 }
 void MakeDylibExport(const std::string &strBaseDir, const FileDescriptor *pDescriptor)
 {
