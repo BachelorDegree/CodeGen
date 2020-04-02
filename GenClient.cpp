@@ -49,6 +49,7 @@ void MakeClient(const std::string &strBaseDir, const FileDescriptor *pDescriptor
   FilePrinter oHeaderPrinter{strBaseDir + "/" + pDescriptor->service(0)->name() + "Client.hpp"};
   oHeaderPrinter.Print(R"xxx(#pragma once
 #include <memory>
+#include <string>
 #include <grpc/grpc.h>
 #include <grpcpp/channel.h>
 #include "$package$.grpc.pb.h"
@@ -59,6 +60,8 @@ private:
   std::shared_ptr<grpc::Channel> m_pChannel;
 public:
   $service$Client();
+  //use specific ip:port
+  $service$Client(const std::string &strAddress);
   static std::shared_ptr<grpc::Channel> GetChannel();)xxx",
                        oArgument);
   oHeaderPrinter.Indent();
@@ -88,12 +91,17 @@ $service$Client::$service$Client()
 {
   m_pChannel = GetChannel();
 }
+$service$Client::$service$Client(const std::string &strAddress)
+{
+  m_pChannel = grpc::CreateChannel(strAddress, grpc::InsecureChannelCredentials());
+}
 std::shared_ptr<grpc::Channel> $service$Client::GetChannel()
 {
   const std::string strServiceName = "$service$";
   std::string strServer = SatelliteClient::GetInstance().GetNode(strServiceName);
   return grpc::CreateChannel(strServer, grpc::InsecureChannelCredentials());
-})xxx", oArgument);
+})xxx",
+                       oArgument);
   for (int i = 0; i < pDescriptor->service_count(); i++)
   {
     auto pService = pDescriptor->service(i);
@@ -106,7 +114,7 @@ std::shared_ptr<grpc::Channel> $service$Client::GetChannel()
       oArgument["response"] = pMethod->output_type()->name();
       oArgument["response_symbol"] = PBHelper::QualifiedClassName(pMethod->output_type());
       oClientPrinter.Print("int $service$Client::$method$(const $request_symbol$ & oReq, $response_symbol$ & oResp)", oArgument);
-  oClientPrinter.Print(R"xxx({
+      oClientPrinter.Print(R"xxx({
   $service_symbol$::Stub oStub{m_pChannel};
   grpc::ClientContext oContext;
   auto oStatus = oStub.$method$(&oContext, oReq, &oResp);
@@ -115,7 +123,8 @@ std::shared_ptr<grpc::Channel> $service$Client::GetChannel()
     return -1;
   }
   return ClientContextHelper(oContext).GetReturnCode();
-})xxx", oArgument);
+})xxx",
+                           oArgument);
     }
   }
 }

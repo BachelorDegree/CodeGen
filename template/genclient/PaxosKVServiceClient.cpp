@@ -3,8 +3,13 @@
 #include <coredeps/SatelliteClient.hpp>
 #include <coredeps/ContextHelper.hpp>
 #include "PaxosKVServiceClient.hpp"
-PaxosKVServiceClient::PaxosKVServiceClient(){
+PaxosKVServiceClient::PaxosKVServiceClient()
+{
   m_pChannel = GetChannel();
+}
+PaxosKVServiceClient::PaxosKVServiceClient(const std::string &strAddress)
+{
+  m_pChannel = grpc::CreateChannel(strAddress, grpc::InsecureChannelCredentials());
 }
 std::shared_ptr<grpc::Channel> PaxosKVServiceClient::GetChannel()
 {
