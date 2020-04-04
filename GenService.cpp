@@ -248,8 +248,9 @@ void MakeServerConf(const std::string &strBaseDir, const FileDescriptor *pDescri
         canonical_service_name = $service$
         dylib_path = /path/to/libsample.so
         config_file = /path/to/business/config.conf
-    </$service$>>
-</libs>)xxx", oArgument);
+    </$service$>
+</libs>)xxx",
+                     oArgument);
 }
 void MakeDylibExport(const std::string &strBaseDir, const FileDescriptor *pDescriptor)
 {
