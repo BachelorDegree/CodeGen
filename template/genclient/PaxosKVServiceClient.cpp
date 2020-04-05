@@ -3,18 +3,26 @@
 #include <coredeps/SatelliteClient.hpp>
 #include <coredeps/ContextHelper.hpp>
 #include "PaxosKVServiceClient.hpp"
-PaxosKVServiceClient::PaxosKVServiceClient()
+PaxosKVServiceClient::PaxosKVServiceClient():
+  m_strServiceName("PaxosKVService")
 {
-  m_pChannel = GetChannel();
+  m_pChannel = this->GetChannel();
 }
-PaxosKVServiceClient::PaxosKVServiceClient(const std::string &strAddress)
+PaxosKVServiceClient::PaxosKVServiceClient(const std::string &strIpPortOrCanonicalName)
 {
-  m_pChannel = grpc::CreateChannel(strAddress, grpc::InsecureChannelCredentials());
+  if (strIpPortOrCanonicalName.find(':') == std::string::npos)
+  {
+    m_strServiceName = strIpPortOrCanonicalName;
+    m_pChannel = this->GetChannel();
+  }
+  else
+  {
+    m_pChannel = grpc::CreateChannel(strIpPortOrCanonicalName, grpc::InsecureChannelCredentials());
+  }
 }
 std::shared_ptr<grpc::Channel> PaxosKVServiceClient::GetChannel()
 {
-  const std::string strServiceName = "PaxosKVService";
-  std::string strServer = SatelliteClient::GetInstance().GetNode(strServiceName);
+  std::string strServer = SatelliteClient::GetInstance().GetNode(m_strServiceName);
   return grpc::CreateChannel(strServer, grpc::InsecureChannelCredentials());
 }
 int PaxosKVServiceClient::Get(const ::paxoskv::GetReq &oReq, ::paxoskv::GetResp &oResp)

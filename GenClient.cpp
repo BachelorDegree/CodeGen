@@ -58,11 +58,12 @@ class $service$Client
 {
 private:
   std::shared_ptr<grpc::Channel> m_pChannel;
+  std::string m_strServiceName;
 public:
   $service$Client();
-  //use specific ip:port
-  $service$Client(const std::string &strAddress);
-  static std::shared_ptr<grpc::Channel> GetChannel();)xxx",
+  // User specified IpPort or CanonicalName
+  $service$Client(const std::string &strIpPortOrCanonicalName);
+  std::shared_ptr<grpc::Channel> GetChannel();)xxx",
                        oArgument);
   oHeaderPrinter.Indent();
   for (int i = 0; i < pDescriptor->service_count(); i++)
@@ -93,12 +94,19 @@ $service$Client::$service$Client()
 }
 $service$Client::$service$Client(const std::string &strAddress)
 {
-  m_pChannel = grpc::CreateChannel(strAddress, grpc::InsecureChannelCredentials());
+  if (strIpPortOrCanonicalName.find(':') == std::string::npos)
+  {
+    m_strServiceName = strIpPortOrCanonicalName;
+    m_pChannel = this->GetChannel();
+  }
+  else
+  {
+    m_pChannel = grpc::CreateChannel(strIpPortOrCanonicalName, grpc::InsecureChannelCredentials());
+  }
 }
 std::shared_ptr<grpc::Channel> $service$Client::GetChannel()
 {
-  const std::string strServiceName = "$service$";
-  std::string strServer = SatelliteClient::GetInstance().GetNode(strServiceName);
+  std::string strServer = SatelliteClient::GetInstance().GetNode(m_strServiceName);
   return grpc::CreateChannel(strServer, grpc::InsecureChannelCredentials());
 })xxx",
                        oArgument);
