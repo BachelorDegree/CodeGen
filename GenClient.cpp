@@ -92,7 +92,7 @@ $service$Client::$service$Client()
 {
   m_pChannel = GetChannel();
 }
-$service$Client::$service$Client(const std::string &strAddress)
+$service$Client::$service$Client(const std::string &strIpPortOrCanonicalName)
 {
   if (strIpPortOrCanonicalName.find(':') == std::string::npos)
   {
