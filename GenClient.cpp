@@ -34,7 +34,7 @@ LINK_LIBRARIES(pthread protobuf gpr grpc++ grpc++_reflection)
 SET(APP_SOURCES "./|service|Client.cpp")
 FILE(GLOB APP_SOURCES ${APP_SOURCES} "./*.cpp")
 FILE(GLOB APP_SOURCES ${APP_SOURCES} "./*.cc")
-ADD_LIBRARY(|package|client SHARED ${APP_SOURCES})
+ADD_LIBRARY(|package|client STATIC ${APP_SOURCES})
 TARGET_LINK_LIBRARIES(|package|client coredeps)
 
 )xxx",
