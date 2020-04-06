@@ -88,7 +88,8 @@ public:
 #include <coredeps/SatelliteClient.hpp>
 #include <coredeps/ContextHelper.hpp>
 #include "$service$Client.hpp"
-$service$Client::$service$Client()
+$service$Client::$service$Client():
+  m_strServiceName(\"$service$\")
 {
   m_pChannel = GetChannel();
 }
