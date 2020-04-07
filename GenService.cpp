@@ -235,8 +235,6 @@ void MakeServerConf(const std::string &strBaseDir, const FileDescriptor *pDescri
 
     worker_thread_num = 4
     worker_co_num = 20
-    
-    log_level = info
 </server>
 <satellite>
     bind_interface = eth0
