@@ -245,6 +245,23 @@ void MakeServerConf(const std::string &strBaseDir, const FileDescriptor *pDescri
         # server2 = 10.0.0.103:5553
     </servers>
 </satellite>
+<log>
+    level = info
+    # Options: stdout/file/rotating/daily
+    type = stdout
+    # No need to set this if `type` is stdout
+    path = /path/to/log/file.log
+    
+    # pattern = [%H:%M:%S %z] [%n] [%^---%L---%$] [thread %t] %v
+    <rotating>
+        max_size = 134217728
+        max_file = 10
+    </rotating>
+    <daily>
+        refresh_at_hour = 0
+        refresh_at_minute = 0
+    </daily>
+</log>
 <libs>
     <$service$>
         canonical_service_name = $service$
