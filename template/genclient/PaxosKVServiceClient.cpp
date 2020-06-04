@@ -2,9 +2,9 @@
 #include <grpcpp/create_channel.h>
 #include <coredeps/SatelliteClient.hpp>
 #include <coredeps/ContextHelper.hpp>
+#include <coredeps/MonitorClient.hpp>
 #include "PaxosKVServiceClient.hpp"
-PaxosKVServiceClient::PaxosKVServiceClient():
-  m_strServiceName("PaxosKVService")
+PaxosKVServiceClient::PaxosKVServiceClient() : m_strServiceName("PaxosKVService")
 {
   m_pChannel = this->GetChannel();
 }
@@ -29,10 +29,17 @@ int PaxosKVServiceClient::Get(const ::paxoskv::GetReq &oReq, ::paxoskv::GetResp 
 {
   paxoskv::PaxosKVService::Stub oStub{m_pChannel};
   grpc::ClientContext oContext;
+  ServerContextHelper::GetInstance()->MakeClientContext(oContext);
   auto oStatus = oStub.Get(&oContext, oReq, &oResp);
+  int iRet = -1;
   if (oStatus.ok() == false)
   {
-    return -1;
+    iRet = -1;
   }
-  return ClientContextHelper(oContext).GetReturnCode();
+  else
+  {
+    iRet = ClientContextHelper(oContext).GetReturnCode();
+  }
+  MonitorClient::IncrStatusCode(true, ServerContextHelper::GetInstance()->GetCalleeInterfaceName(), "PaxosKVService.Get", iRet);
+  return iRet;
 }

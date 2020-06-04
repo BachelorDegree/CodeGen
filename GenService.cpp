@@ -206,7 +206,11 @@ public:
     void SetStatusCreate(void) { status = Status::CREATE; }
     void SetStatusProcess(void) { status = Status::PROCESS; }
     void SetStatusFinish(void) { status = Status::FINISH; }
-    void BeforeProcess(void) { ServerContextHelper::GetInstance()->BindContext(ctx); }
+    void BeforeProcess(void)
+    {
+        ServerContextHelper::GetInstance()->SetCalleeInterfaceName(this->GetInterfaceName());
+        ServerContextHelper::GetInstance()->BindContext(ctx);
+    }
     void SetReturnCode(int iRet) { ServerContextHelper::GetInstance()->SetReturnCode(iRet); }
 protected:
     Status                          status;
@@ -260,6 +264,10 @@ void MakeServerConf(const std::string &strBaseDir, const FileDescriptor *pDescri
         refresh_at_minute = 0
     </daily>
 </log>
+<monitor>
+    server = 10.0.0.211:8080
+    myid = 1
+</monitor>
 <libs>
     <|service|>
         canonical_service_name = |service|

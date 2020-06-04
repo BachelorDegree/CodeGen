@@ -87,6 +87,7 @@ public:
 #include <grpcpp/create_channel.h>
 #include <coredeps/SatelliteClient.hpp>
 #include <coredeps/ContextHelper.hpp>
+#include <coredeps/MonitorClient.hpp>
 #include "$service$Client.hpp"
 $service$Client::$service$Client():
   m_strServiceName("$service$")
@@ -126,12 +127,19 @@ std::shared_ptr<grpc::Channel> $service$Client::GetChannel()
       oClientPrinter.Print(R"xxx({
   $service_symbol$::Stub oStub{m_pChannel};
   grpc::ClientContext oContext;
+  ServerContextHelper::GetInstance()->MakeClientContext(oContext);
   auto oStatus = oStub.$method$(&oContext, oReq, &oResp);
+  int iRet = -1;
   if (oStatus.ok() == false)
   {
-    return -1;
+    iRet = -1;
   }
-  return ClientContextHelper(oContext).GetReturnCode();
+  else
+  {
+    iRet = ClientContextHelper(oContext).GetReturnCode();
+  }
+  MonitorClient::IncrStatusCode(true, ServerContextHelper::GetInstance()->GetCalleeInterfaceName(), "$service$.$method$", iRet);
+  return iRet;
 })xxx",
                            oArgument);
     }
